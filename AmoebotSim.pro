@@ -21,6 +21,7 @@ HEADERS += \
     alg/energyshape.h \
     alg/energysharing.h \
     alg/hexagonformation.h \
+    alg/holefiller.h \
     alg/infobjcoating.h \
     alg/leaderelectionbyerosion.h \
     alg/shapeformation.h \
@@ -58,6 +59,7 @@ SOURCES += \
     alg/energyshape.cpp \
     alg/energysharing.cpp \
     alg/hexagonformation.cpp \
+    alg/holefiller.cpp \
     alg/infobjcoating.cpp \
     alg/leaderelectionbyerosion.cpp \
     alg/shapeformation.cpp \

@@ -246,6 +246,17 @@ public slots:
     void instantiate(const int numParticles = 100, const double holeProb = 0.2);
 };
 
+class HoleFillerAlg : public Algorithm
+{
+    Q_OBJECT
+
+public:
+    HoleFillerAlg();
+
+public slots:
+    void instantiate(const int numParticles = 50);
+};
+
 class AlgorithmList {
  public:
   // Constructs a list of algorithms recognized by the simulator (for now, this

@@ -21,6 +21,7 @@
 #include "alg/leaderelectionbyerosion.h"
 #include "alg/shapeformation.h"
 #include "alg/singlepoint.h"
+#include "alg/holefiller.h"
 
 Algorithm::Algorithm(QString name, QString signature)
     : _name(name),
@@ -424,6 +425,24 @@ void SingleParticleAlg::instantiate(const int numParticles, const double holePro
     }
 }
 
+HoleFillerAlg::HoleFillerAlg()
+    : Algorithm("Hole Filler", "holefiller")
+{
+    addParameter("# Particles", "50");
+}
+
+void HoleFillerAlg::instantiate(const int numParticles)
+{
+    if (numParticles <= 0)
+    {
+        emit log("# particles must be > 0", true);
+    }
+    else
+    {
+        emit setSystem(std::make_shared<HoleFillerSystem>(numParticles));
+    }
+}
+
 AlgorithmList::AlgorithmList() {
   // Demo algorithms.
   _algorithms.push_back(new DiscoDemoAlg());
@@ -447,6 +466,7 @@ AlgorithmList::AlgorithmList() {
 
   // Custom algorithms.
   _algorithms.push_back(new SingleParticleAlg());
+  _algorithms.push_back(new HoleFillerAlg());
 }
 
 AlgorithmList::~AlgorithmList() {
