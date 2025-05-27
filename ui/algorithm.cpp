@@ -20,6 +20,7 @@
 #include "alg/leaderelection.h"
 #include "alg/leaderelectionbyerosion.h"
 #include "alg/shapeformation.h"
+#include "alg/singlepoint.h"
 
 Algorithm::Algorithm(QString name, QString signature)
     : _name(name),
@@ -400,6 +401,29 @@ void ShapeFormationAlg::instantiate(const int numParticles,
   }
 }
 
+SingleParticleAlg::SingleParticleAlg()
+    : Algorithm("Single Particle", "singleparticle")
+{
+    addParameter("# Particles", "100");
+    addParameter("Hole Prob.", "0.2");
+}
+
+void SingleParticleAlg::instantiate(const int numParticles, const double holeProb)
+{
+    if (numParticles <= 0)
+    {
+        emit log("# particles must be > 0", true);
+    }
+    else if (holeProb < 0 || holeProb > 1)
+    {
+        emit log("holeProb in [0,1] required", true);
+    }
+    else
+    {
+        emit setSystem(std::make_shared<SingleParticleSystem>(numParticles, holeProb));
+    }
+}
+
 AlgorithmList::AlgorithmList() {
   // Demo algorithms.
   _algorithms.push_back(new DiscoDemoAlg());
@@ -420,6 +444,9 @@ AlgorithmList::AlgorithmList() {
   _algorithms.push_back(new LeaderElectionAlg());
   _algorithms.push_back(new LeaderElectionByErosionAlg());
   _algorithms.push_back(new ShapeFormationAlg());
+
+  // Custom algorithms.
+  _algorithms.push_back(new SingleParticleAlg());
 }
 
 AlgorithmList::~AlgorithmList() {

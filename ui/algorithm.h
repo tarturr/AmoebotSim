@@ -235,6 +235,17 @@ class ShapeFormationAlg : public Algorithm {
                    const QString mode = "h");
 };
 
+class SingleParticleAlg : public Algorithm
+{
+    Q_OBJECT
+
+public:
+    SingleParticleAlg();
+
+public slots:
+    void instantiate(const int numParticles = 100, const double holeProb = 0.2);
+};
+
 class AlgorithmList {
  public:
   // Constructs a list of algorithms recognized by the simulator (for now, this
