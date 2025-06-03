@@ -1,24 +1,20 @@
 #ifndef SINGLEPOINT_H
 #define SINGLEPOINT_H
 
-#include "core/amoebotparticle.h"
+#include "core/globalparticle.h"
 #include "core/amoebotsystem.h"
 
-#include <vector>
-#include <unordered_map>
 
-
-class SingleParticle : public AmoebotParticle
+class SingleParticle : public GlobalParticle
 {
 public:
+    using Direction = GlobalParticle::Direction;
+
     enum class State
     {
-        Init,
+        Active,
         Idle,
-        Leader,
-        LeaderConnected,
-        Connecting,
-        Connected
+        Leader
     };
 
     SingleParticle(const Node& head, const int globalTailDir, const int orientation, AmoebotSystem& system);
@@ -30,17 +26,13 @@ public:
     int headMarkColor() const override;
     int tailMarkColor() const override;
 
-    SingleParticle& nbrAtLabel(int label) const;
+    SingleParticle& nbrAtGlobalDir(int dir, bool head = true) const;
 protected:
-    using Neighbors = std::unordered_map<int, SingleParticle*>;
-
-    bool canIdle() const;
-    std::vector<std::vector<int>> uselessShapes(int n) const;
-    void connect(int label);
-    Neighbors neighbors() const;
+    int erode() const;
+    std::vector<int> getActiveNbrs() const;
 
     State _state;
-    int _connectedNbr;
+    int _pointAt;
 private:
     friend class SingleParticleSystem;
 };
@@ -49,7 +41,7 @@ private:
 class SingleParticleSystem : public AmoebotSystem
 {
 public:
-    SingleParticleSystem(const int numParticles = 100, const double holeProb = 0.2);
+    SingleParticleSystem(const int numParticles = 250);
 };
 
 

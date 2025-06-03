@@ -5,59 +5,29 @@ SingleParticle::SingleParticle(const Node& head,
                                const int globalTailDir,
                                const int orientation,
                                AmoebotSystem& system)
-    : AmoebotParticle(head, globalTailDir, orientation, system),
-    _state(State::Init),
-    _connectedNbr(-1) {}
+    : GlobalParticle(head, globalTailDir, orientation, system),
+    _state(State::Active),
+    _pointAt(-1) {}
 
 void SingleParticle::activate()
 {
-    switch (_state)
+    if (_state == State::Active)
     {
-    case State::Init:
-    {
-        SingleParticle::Neighbors nbrs{ neighbors() };
-        auto containsInit = [](const std::pair<int, SingleParticle*> elem) -> bool
-        {
-            return elem.second->_state == State::Init;
-        };
-
-        if (std::find_if(nbrs.begin(), nbrs.end(), containsInit) == nbrs.end())
+        if (getActiveNbrs().empty())
         {
             _state = State::Leader;
         }
-        else if (canIdle())
+        else
         {
-            _state = State::Idle;
-        }
+            int newOrientation{ erode() };
 
-        break;
-    }
-
-    case State::Leader:
-        for (const auto& neighbor : neighbors())
-        {
-            neighbor.second->connect(neighbor.first);
-            neighbor.second->_state = State::Connecting;
-        }
-
-        _state = State::LeaderConnected;
-        break;
-
-    case State::Connecting:
-        for (const auto& neighbor : neighbors())
-        {
-            State pState{ neighbor.second->_state };
-
-            if (pState != State::LeaderConnected && pState != State::Connected)
+            // If the particle CAN erode.
+            if (newOrientation != -1)
             {
-                neighbor.second->connect(neighbor.first);
+                _pointAt = newOrientation;
+                _state = State::Idle;
             }
         }
-
-        _state = State::Connected;
-
-    default:
-        break;
     }
 }
 
@@ -69,39 +39,31 @@ QString SingleParticle::inspectionText() const
             + QString::number(head.y) + ")\n";
     text += "  orientation: " + QString::number(orientation) + "\n";
     text += "  globalTailDir: " + QString::number(globalTailDir) + "\n";
-    text += "  neighborsCount: " + QString::number(neighbors().size()) + "\n\n";
 
     text += "Local Info:\n";
-    text += [this](){
-        switch(_state) {
-        case State::Init:            return "init\n";
-        case State::Idle:            return "idle\n";
-        case State::Leader:          return "leader\n";
-        case State::LeaderConnected: return "leaderconnected\n";
-        case State::Connecting:      return "connecting\n";
-        case State::Connected:       return "connected\n";
-        }
-        return "no state\n";
-    }();
+
+    switch(_state)
+    {
+    case State::Active:   text += "Init\n";
+    case State::Idle:   text += "Idle\n";
+    case State::Leader: text += "Leader\n";
+    }
 
     return text;
 }
 
 int SingleParticle::headMarkDir() const
 {
-    return _connectedNbr;
+    return _pointAt;
 }
 
 int SingleParticle::headMarkColor() const
 {
     switch (_state)
     {
-    case State::Idle:            return 0x777777; // Gray
-    case State::Connecting:      return 0xFF8010; // Orange
-    case State::Connected:       return 0x33FFFF; // Cyan
-    case State::Init:            return 0x1010FF; // Blue
-    case State::Leader:          return 0x10FF10; // Green
-    case State::LeaderConnected: return 0xFFFF10; // Pink
+    case State::Active:   return 0x1010FF; // Blue
+    case State::Idle:   return 0x10FFFF; // Gray
+    case State::Leader: return 0x10FF10; // Green
     }
 }
 
@@ -110,141 +72,117 @@ int SingleParticle::tailMarkColor() const
     return headMarkColor();
 }
 
-SingleParticle& SingleParticle::nbrAtLabel(int label) const
+SingleParticle& SingleParticle::nbrAtGlobalDir(int dir, bool head) const
 {
-    return AmoebotParticle::nbrAtLabel<SingleParticle>(label);
+    return GlobalParticle::nbrAtGlobalDir<SingleParticle>(dir, head);
 }
 
-bool SingleParticle::canIdle() const
+std::vector<int> SingleParticle::getActiveNbrs() const
 {
-    SingleParticle::Neighbors nbrs{ neighbors() };
-    std::size_t nbrCount{ nbrs.size() };
-
-    auto shapes{ uselessShapes(nbrCount) };
-
-    for (const auto& shape : shapes)
-    {
-        std::size_t count = 0;
-
-        for (const int label : shape)
-        {
-            auto nbr{ nbrs.find(label) };
-
-            if (nbr != nbrs.end() && nbr->second->_state == State::Init)
-            {
-                ++count;
-            }
-        }
-
-        if (count == nbrCount)
-            return true;
-    }
-
-    return false;
-}
-
-std::vector<std::vector<int>> SingleParticle::uselessShapes(int n) const
-{
-    std::vector<std::vector<int>> shapes;
-    std::vector<int> values;
-
-    for (int i = 0; i < n; ++i)
-    {
-        values.push_back(i);
-    }
+    std::vector<int> activeNbrs;
 
     for (int i = 0; i < 6; ++i)
     {
-        for (int& val : values)
+        if (hasNbrAtGlobalDir(i) && nbrAtGlobalDir(i)._state == State::Active)
         {
-            val = (val + 1) % 6;
-        }
-
-        shapes.push_back(values);
-    }
-
-    return shapes;
-}
-
-void SingleParticle::connect(int label)
-{
-    _connectedNbr = (label + 3) % 6;
-}
-
-
-SingleParticleSystem::SingleParticleSystem(const int numParticles, const double holeProb)
-{
-    Q_ASSERT(numParticles > 0);
-    Q_ASSERT(0 <= holeProb && holeProb <= 1);
-
-    // Insert the seed at (0,0).
-    insert(new SingleParticle(Node(0, 0), -1, randDir(), *this));
-    std::set<Node> occupied;
-    occupied.insert(Node(0, 0));
-
-    std::set<Node> candidates;
-    for (int i = 0; i < 6; ++i) {
-        candidates.insert(Node(0, 0).nodeInDir(i));
-    }
-
-    // Add inactive particles.
-    int numNonStaticParticles = 0;
-    while (numNonStaticParticles < numParticles && !candidates.empty()) {
-        // Pick random candidate.
-        int randIndex = randInt(0, candidates.size());
-        Node randomCandidate;
-        for (auto it = candidates.begin(); it != candidates.end(); ++it) {
-            if (randIndex == 0) {
-                randomCandidate = *it;
-                candidates.erase(it);
-                break;
-            } else {
-                randIndex--;
-            }
-        }
-
-        occupied.insert(randomCandidate);
-
-        // Add this candidate as a particle if not a hole.
-        if (randBool(1.0 - holeProb)) {
-            insert(new SingleParticle(randomCandidate, -1, randDir(), *this));
-            ++numNonStaticParticles;
-
-            // Add new candidates.
-            for (int i = 0; i < 6; ++i) {
-                auto neighbor = randomCandidate.nodeInDir(i);
-                if (occupied.find(neighbor) == occupied.end()) {
-                    candidates.insert(neighbor);
-                }
-            }
+            activeNbrs.push_back(i);
         }
     }
+
+    return activeNbrs;
 }
 
-SingleParticle::Neighbors SingleParticle::neighbors() const
-{
-    SingleParticle::Neighbors neighbors;
+using Rotations = std::vector<std::vector<int>>;
 
-    for (int i = 0; i < 6; ++i)
+Rotations getRotations(int n)
+{
+    Rotations rotations;
+
+    for (int j = 0; j < 6; ++j)
     {
-        if (hasNbrAtLabel(i))
+        std::vector<int> rotation;
+
+        for (int i = 0; i < n; ++i)
         {
-            neighbors.insert({ i, &nbrAtLabel(i) });
+            rotation.push_back((i + j) % 6);
         }
+
+        rotations.push_back(std::move(rotation));
     }
 
-    return neighbors;
+    return rotations;
+}
+
+int SingleParticle::erode() const
+{
+    std::vector<int> activeNbrs = getActiveNbrs();
+    std::size_t max{ activeNbrs.size() };
+
+    if (max == 6)
+    {
+        return -1;
+    }
+    else if (max == 1)
+    {
+        return activeNbrs[0];
+    }
+
+    Rotations rotations = getRotations(max);
+
+    if (std::find(rotations.begin(), rotations.end(), activeNbrs) != rotations.end())
+    {
+        return activeNbrs[0];
+    }
+
+    return -1;
 }
 
 
+SingleParticleSystem::SingleParticleSystem(const int numParticles)
+{
+    int x, y;
+    for (int i = 1; i <= numParticles; ++i) {
+        int layer = 1;
+        int position = i - 1;
+        while (position - (6 * layer) >= 0) {
+            position -= 6 * layer;
+            ++layer;
+        }
 
+        switch(position / layer) {
+        case 0: {
+            x = layer;
+            y = (position % layer) - layer;
+            if (position % layer == 0) {x -= 1; y += 1;}  // Corner case.
+            break;
+        }
+        case 1: {
+            x = layer - (position % layer);
+            y = position % layer;
+            break;
+        }
+        case 2: {
+            x = -1 * (position % layer);
+            y = layer;
+            break;
+        }
+        case 3: {
+            x = -1 * layer;
+            y = layer - (position % layer);
+            break;
+        }
+        case 4: {
+            x = (position % layer) - layer;
+            y = -1 * (position % layer);
+            break;
+        }
+        case 5: {
+            x = (position % layer);
+            y = -1 * layer;
+            break;
+        }
+        }
 
-
-
-
-
-
-
-
-
-
+        insert(new SingleParticle(Node(x, y), -1, 0, *this));
+    }
+}
