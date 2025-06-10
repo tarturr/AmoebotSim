@@ -22,6 +22,7 @@
 #include "alg/shapeformation.h"
 #include "alg/singlepoint.h"
 #include "alg/holefiller.h"
+#include "alg/test.h"
 
 Algorithm::Algorithm(QString name, QString signature)
     : _name(name),
@@ -405,11 +406,29 @@ void ShapeFormationAlg::instantiate(const int numParticles,
 SingleParticleAlg::SingleParticleAlg()
     : Algorithm("Single Particle", "singleparticle")
 {
-    addParameter("# Particles", "100");
+    addParameter("# Particles", "250");
+}
+
+void SingleParticleAlg::instantiate(const int numParticles)
+{
+    if (numParticles <= 0)
+    {
+        emit log("# particles must be > 0", true);
+    }
+    else
+    {
+        emit setSystem(std::make_shared<SingleParticleSystem>(numParticles));
+    }
+}
+
+HoleFillerAlg::HoleFillerAlg()
+    : Algorithm("Hole Filler", "holefiller")
+{
+    addParameter("# Particles", "50");
     addParameter("Hole Prob.", "0.2");
 }
 
-void SingleParticleAlg::instantiate(const int numParticles, const double holeProb)
+void HoleFillerAlg::instantiate(const unsigned int numParticles, const double holeProb)
 {
     if (numParticles <= 0)
     {
@@ -421,25 +440,30 @@ void SingleParticleAlg::instantiate(const int numParticles, const double holePro
     }
     else
     {
-        emit setSystem(std::make_shared<SingleParticleSystem>(numParticles, holeProb));
+        emit setSystem(std::make_shared<HoleFillerSystem>(numParticles, holeProb));
     }
 }
 
-HoleFillerAlg::HoleFillerAlg()
-    : Algorithm("Hole Filler", "holefiller")
+TestParticleAlg::TestParticleAlg()
+    : Algorithm("Test Algorithm", "testalg")
 {
-    addParameter("# Particles", "50");
+    addParameter("# Particles", "200");
+    addParameter("Hole Prob.", "0.2");
 }
 
-void HoleFillerAlg::instantiate(const int numParticles)
+void TestParticleAlg::instantiate(const unsigned int numParticles, const double holeProb)
 {
     if (numParticles <= 0)
     {
         emit log("# particles must be > 0", true);
     }
+    else if (holeProb < 0 || holeProb > 1)
+    {
+        emit log("holeProb in [0,1] required", true);
+    }
     else
     {
-        emit setSystem(std::make_shared<HoleFillerSystem>(numParticles));
+        emit setSystem(std::make_shared<TestParticleSystem>(numParticles, holeProb));
     }
 }
 
@@ -467,6 +491,7 @@ AlgorithmList::AlgorithmList() {
   // Custom algorithms.
   _algorithms.push_back(new SingleParticleAlg());
   _algorithms.push_back(new HoleFillerAlg());
+  _algorithms.push_back(new TestParticleAlg());
 }
 
 AlgorithmList::~AlgorithmList() {

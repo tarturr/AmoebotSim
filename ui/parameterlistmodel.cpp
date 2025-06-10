@@ -134,7 +134,10 @@ void ParameterListModel::createSystem(QString algName) {
           instantiate(params[0].toInt());
   } else if (signature == "holefiller") {
       dynamic_cast<HoleFillerAlg*>(alg)->
-          instantiate(params[0].toInt());
+          instantiate(params[0].toInt(), params[1].toDouble());
+  } else if (signature == "testalg") {
+      dynamic_cast<TestParticleAlg*>(alg)->
+          instantiate(params[0].toInt(), params[1].toDouble());
   } else {
     Q_ASSERT(false);  // An unrecognized signature has been entered.
   }
