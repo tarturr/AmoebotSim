@@ -1,286 +1,249 @@
 #include "alg/holefiller.h"
 
 
-constexpr std::initializer_list<HoleFillerParticle::Direction> HoleFillerParticle::_ORDERED_DIRS;
 
-using Direction = HoleFillerParticle::Direction;
+HoleFillerParticle::HoleFillerParticle(const Node& head,
+                     const int globalTailDir,
+                     const int orientation,
+                     AmoebotSystem& system)
+  : GlobalParticle(head, globalTailDir, orientation, system) {}
 
-HoleFillerParticle::HoleFillerParticle(const Node head, const int globalTailDir, const int orientation, AmoebotSystem& system)
-    : GlobalParticle(head, globalTailDir, orientation, system), _state(State::Stabilized)
-{
+HoleFillerParticle& HoleFillerParticle::nbrAtGlobalDir(int dir, bool head) const {
+  return GlobalParticle::nbrAtGlobalDir<HoleFillerParticle>(dir, head);
 }
 
-void HoleFillerParticle::activate()
-{
-    switch (_state)
-    {
-    case State::Stabilized:
-        // onStabilized();
-        break;
+void HoleFillerParticle::activate() {
+  bool exp = isExpanded();
 
-    case State::Drop:
-        onDrop();
-        break;
-
-    case State::Rescue:
-        onRescue();
-        break;
+  // If the particle is contracted.
+  if (!exp) {
+    // If there is a neighbor on the bottom right and not on the bottom left.
+    if (!hasNbrAtGlobalDir(Direction::BottomLeft) && hasNbrAtGlobalDir(Direction::BottomRight)) {
+      expandToGlobalDir(Direction::BottomLeft);
+      exp = true;
+    // If there is a neighbor on the bottom left and not on the bottom right.
+    } else if (!hasNbrAtGlobalDir(Direction::BottomRight) && hasNbrAtGlobalDir(Direction::BottomLeft)) {
+      expandToGlobalDir(Direction::BottomRight);
+      exp = true;
     }
-}
+  }
 
-// Invariants:
-//     - Down neighbors both present or absent.
-//     - If absent, has at least a neighbor, left or right.
-// void HoleFillerParticle::onStabilized()
-// {
-//     // Find the first rescue-mode expanded particle and push it, if any.
-//     for (const Direction dir : HoleFillerParticle::_ORDERED_DIRS)
-//     {
-//         if (hasNbrAtGlobalDir(dir))
-//         {
-//             HoleFillerParticle& nbr{ nbrAtGlobalDir(dir) };
+  // If the particle is expanded.
+  if (exp) {
+    bool canContract = true;
 
-//             if (nbr._state == State::Rescue && nbr.isExpanded())
-//             {
-//                 pushToGlobalDir(dir);
-//                 _state = State::Rescue;
-//                 return;
-//             }
-//         }
-//     }
+    switch (globalTailDir) {
+    // Head expanded on the bottom right.
+    case Direction::TopLeft:
+      for (int i = 1; i <= 3; i++) {
+        if (hasNbrAtGlobalDir(i, false)) {
+          HoleFillerParticle& other = nbrAtGlobalDir(i, false);
 
-//     bool hasBtmLeft{ hasNbrAtGlobalDir(Direction::BottomLeft) };
-//     bool hasBtmRight{ hasNbrAtGlobalDir(Direction::BottomRight) };
-
-//     if (hasBtmLeft || hasBtmRight)
-//     {
-//         Direction expandedDir{ findExpandedNbr({ Direction::BottomLeft, Direction::BottomRight }) };
-
-//         if (expandedDir == Direction::None)
-//         {
-//             if (hasBtmLeft ^ hasBtmRight)
-//             {
-//                 expandToGlobalDir(hasBtmRight ? Direction::BottomLeft : Direction::BottomRight);
-//                 _state = State::Drop;
-//             }
-//         }
-//         else
-//         {
-//             HoleFillerParticle& nbr{ nbrAtGlobalDir(expandedDir) };
-//             int oldHeadDir{ (nbr.globalTailDir + 3) % 6 };
-//             nbr.contractHead();
-
-//             if (hasNbrAtGlobalDir(expandedDir))
-//             {
-//                 nbr.expandToGlobalDir(oldHeadDir);
-//                 pushToGlobalDir(expandedDir);
-//                 _state = State::Drop;
-//             }
-//             else
-//             {
-//                 nbr.expandToGlobalDir(oldHeadDir);
-//             }
-//         }
-
-//         return;
-//     }
-// }
-
-// Invariants:
-//     - Has either one neighbor down left, or down right.
-void HoleFillerParticle::onDrop()
-{
-    if (isContracted())
-    {
-        _state = State::Stabilized;
-        return;
-    }
-
-    if (globalTailDir == Direction::TopLeft)
-    {
-        std::initializer_list<Direction> dirs
-        {
-            Direction::TopRight,
-            Direction::TopLeft,
-            Direction::Left
-        };
-
-        for (const Direction dir : dirs)
-        {
-            if (hasNbrAtGlobalDir(dir) && nbrAtGlobalDir(dir).isContracted())
-            {
-
+          // If the neighbor cannot be pulled.
+          if (other.isContracted()) {
+            pullFromGlobalDir(i);
+            exp = false;
+            break;
+          // If the present neighbor is on the left.
+          } else if (i == Direction::Left) {
+            // If I am expanded and nobody is on the bottom left.
+            if (!hasNbrAtGlobalDir(Direction::BottomLeft, false) && canContract) {
+              contractTail();
+              expandToGlobalDir(Direction::Left);
+              canContract = false;
             }
+
+            break;
+          }
+
+          canContract = false;
         }
-    }
+      }
 
-    contractTail();
-    _state = State::Stabilized;
-}
+      break;
 
-// Invariants:
-//     - Has only one neighbor or neighbors which
-void HoleFillerParticle::onRescue()
-{
-    if (isExpanded())
-    {
-        for (const int label : tailLabels())
-        {
-            int dir{ labelToGlobalDir(label) };
+    // Head expanded on the right.
+    case Direction::Left:
+      for (int i = 1; i <= 3; i++) {
+        if (hasNbrAtGlobalDir(i, false)) {
+          HoleFillerParticle& other = nbrAtGlobalDir(i, false);
 
-            switch (dir)
-            {
-            case Direction::BottomRight:
-            case Direction::Right:
-            case Direction::TopRight:
-                if (hasNbrAtGlobalDir(dir, false))
-                {
-                    HoleFillerParticle& nbr{ nbrAtGlobalDir(dir) };
-
-                    if (nbr.isExpanded() && nbr._state == State::Rescue)
-                    {
-                        // "Rotation": from pointing x with tail at y, to pointing y with tail at x.
-                        int oldDir{ globalTailDir };
-                        contractTail();
-                        expandToGlobalDir(oldDir);
-
-                        // Pull the preceding rescue particle.
-                        pullFromGlobalDir((oldDir + 3) % 6);
-                        return;
-                    }
-                }
+          // If the neighbor cannot be pulled.
+          if (other.isContracted()) {
+            pullFromGlobalDir(i);
+            exp = false;
+            break;
+          // If the present neighbor is on the left.
+          } else if (i == Direction::Left) {
+            // If the neighbor is expanded in a direction opposed to my head.
+            if (other.globalTailDir == Direction::Right && canContract) {
+              contractTail();
+              expandToGlobalDir(Direction::Left);
             }
-        }
-    }
-    else
-    {
-        for (const Direction dir : HoleFillerParticle::_ORDERED_DIRS)
-        {
-            if (hasNbrAtGlobalDir(dir))
-            {
-                HoleFillerParticle& nbr{ nbrAtGlobalDir(dir) };
+          }
 
-                // If any rescue-mode expanded neighbor is NOT pointing at me,
-                // which means it's travelling back because a more important particle
-                // asks to follow it.
-                if (nbr.isExpanded() && nbr._state == State::Rescue && !pointsAtMe(nbr, globalDirToLabel(dir)))
-                {
-                    pushToGlobalDir(dir);
-                    return;
-                }
+          canContract = false;
+        }
+      }
+
+      if (exp &&
+          canContract &&
+          hasNbrAtGlobalDir(Direction::BottomLeft, false) &&
+          !hasNbrAtGlobalDir(Direction::BottomRight, false)) {
+        contractTail();
+        expandToGlobalDir(Direction::BottomLeft);
+        canContract = false;
+      }
+
+      break;
+
+    // Head expanded on the bottom left.
+    case Direction::TopRight:
+      for (int i = 2; i >= 0; i--) {
+        if (hasNbrAtGlobalDir(i, false)) {
+          HoleFillerParticle& other = nbrAtGlobalDir(i, false);
+
+          // If the neighbor can be pulled.
+          if (other.isContracted())
+          {
+            pullFromGlobalDir(i);
+            exp = false;
+            break;
+          // If the present neighbor is on the right.
+          } else if (i == Direction::Right) {
+            // If I am expanded and nobody is on the bottom right.
+            if(!hasNbrAtGlobalDir(Direction::BottomRight, false) && canContract) {
+              contractTail();
+              expandToGlobalDir(Direction::Right);
+              canContract = false;
             }
+
+            break;
+          }
+
+          canContract = false;
         }
+      }
 
-        _state = State::Stabilized;
-    }
-}
+      break;
 
+    // Head expanded on the left.
+    case Direction::Right:
+      for (int i = 2; i >= 0; i--) {
+        if (hasNbrAtGlobalDir(i, false)) {
+          HoleFillerParticle& other = nbrAtGlobalDir(i, false);
 
-Direction HoleFillerParticle::findExpandedNbr(std::initializer_list<Direction> dirs) const
-{
-    Q_ASSERT(dirs.size() != 0);
-
-    for (const Direction dir : dirs)
-    {
-        if (hasNbrAtGlobalDir(dir))
-        {
-            if (nbrAtGlobalDir(dir).isExpanded())
-            {
-                return dir;
+          // If the neighbor can be pulled.
+          if (other.isContracted()) {
+            pullFromGlobalDir(i);
+            exp = false;
+            break;
+          // If the present neighbor is on the right.
+          } else if (i == Direction::Right) {
+            // If the neighbor is expanded in a direction opposed to my head.
+            if (other.globalTailDir == Direction::Left && canContract) {
+              contractTail();
+              expandToGlobalDir(Direction::Right);
             }
+          }
+
+          canContract = false;
         }
+      }
+
+      if (exp &&
+          canContract &&
+          hasNbrAtGlobalDir(Direction::BottomRight, false) &&
+          !hasNbrAtGlobalDir(Direction::BottomLeft, false)) {
+        contractTail();
+        expandToGlobalDir(Direction::BottomRight);
+        canContract = false;
+      }
+
+      break;
+
+    default:
+      break;
     }
 
-    return Direction::None;
-}
-
-HoleFillerParticle& HoleFillerParticle::nbrAtLabel(int label) const
-{
-    return AmoebotParticle::nbrAtLabel<HoleFillerParticle>(label);
+    if (exp && canContract) {
+      contractTail();
+    }
+  }
 }
 
 QString HoleFillerParticle::inspectionText() const
 {
-    QString text;
-    text += "Global Info:\n";
-    text += "  head: (" + QString::number(head.x) + ", "
-            + QString::number(head.y) + ")\n";
-    text += "  orientation: " + QString::number(orientation) + "\n";
-    text += "  globalTailDir: " + QString::number(globalTailDir) + "\n";
+  QString text;
+  text += "Global Info:\n";
+  text += "  head: (" + QString::number(head.x) + ", "
+      + QString::number(head.y) + ")\n";
+  text += "  orientation: " + QString::number(orientation) + "\n";
+  text += "  globalTailDir: " + QString::number(globalTailDir) + "\n";
+  text += "  left?: " + QString(hasNbrAtGlobalDir(Direction::Left) ? "oui" : "non") + "\n";
+  text += "  right?: " + QString(hasNbrAtGlobalDir(Direction::Right) ? "oui" : "non") + "\n";
+  text += "  topleft?: " + QString(hasNbrAtGlobalDir(Direction::TopLeft) ? "oui" : "non") + "\n";
+  text += "  botleft?: " + QString(hasNbrAtGlobalDir(Direction::BottomLeft) ? "oui" : "non") + "\n";
+  text += "  topright?: " + QString(hasNbrAtGlobalDir(Direction::TopRight) ? "oui" : "non") + "\n";
+  text += "  botright?: " + QString(hasNbrAtGlobalDir(Direction::BottomRight) ? "oui" : "non") + "\n";
 
-    for (int i = 0; i < 6; ++i)
-    {
-        text += "  neighborAt" + QString::number(i) + ": " + QString(hasNbrAtGlobalDir(i) ? "true" : "false") + "\n";
-    }
-
-    return text;
+  return text;
 }
 
 int HoleFillerParticle::headMarkColor() const
 {
-    switch (_state)
-    {
-    case State::Stabilized: return 0x00FF00; // Green
-    case State::Drop:       return 0xFF0000; // Red
-    case State::Rescue:     return 0xFF7700; // Orange
-    }
+  return 0x1010FF ; // Blue
 }
 
 int HoleFillerParticle::tailMarkColor() const
 {
-    return headMarkColor();
+  return 0xfffff0;
 }
 
-HoleFillerParticle& HoleFillerParticle::nbrAtGlobalDir(int dir, bool head) const
-{
-    return GlobalParticle::nbrAtGlobalDir<HoleFillerParticle>(globalDirToLabel(dir, head));
-}
+HoleFillerSystem::HoleFillerSystem(unsigned int numParticles, double holeProb){
+  Q_ASSERT(numParticles > 0);
+  Q_ASSERT(0 <= holeProb && holeProb <= 1);
 
+  // Insert the seed at (0,0).
+  insert(new HoleFillerParticle(Node(0, 0), -1, randDir(), *this));
+  std::set<Node> occupied;
+  occupied.insert(Node(0, 0));
 
-HoleFillerSystem::HoleFillerSystem(const unsigned int particles, const double holeProb) {
-    Q_ASSERT(particles > 0);
-    Q_ASSERT(0 <= holeProb && holeProb <= 1);
+  std::set<Node> candidates;
+  for (int i = 0; i < 6; ++i) {
+    candidates.insert(Node(0, 0).nodeInDir(i));
+  }
 
-    // Insert the seed at (0,0).
-    insert(new HoleFillerParticle(Node(0, 0), -1, randDir(), *this));
-    std::set<Node> occupied;
-    occupied.insert(Node(0, 0));
-
-    std::set<Node> candidates;
-    for (int i = 0; i < 6; ++i) {
-        candidates.insert(Node(0, 0).nodeInDir(i));
+  // Add inactive particles.
+  int numNonStaticParticles = 0;
+  while (numNonStaticParticles < numParticles && !candidates.empty()) {
+    // Pick random candidate.
+    int randIndex = randInt(0, candidates.size());
+    Node randomCandidate;
+    for (auto it = candidates.begin(); it != candidates.end(); ++it) {
+      if (randIndex == 0) {
+        randomCandidate = *it;
+        candidates.erase(it);
+        break;
+      } else {
+        randIndex--;
+      }
     }
 
-    // Add inactive particles.
-    unsigned int numNonStaticParticles = 0;
-    while (numNonStaticParticles < particles && !candidates.empty()) {
-        // Pick random candidate.
-        int randIndex = randInt(0, candidates.size());
-        Node randomCandidate;
-        for (auto it = candidates.begin(); it != candidates.end(); ++it) {
-            if (randIndex == 0) {
-                randomCandidate = *it;
-                candidates.erase(it);
-                break;
-            } else {
-                randIndex--;
-            }
+    occupied.insert(randomCandidate);
+
+    // Add this candidate as a particle if not a hole.
+    if (randBool(1.0 - holeProb)) {
+      insert(new HoleFillerParticle(randomCandidate, -1, randDir(), *this));
+      ++numNonStaticParticles;
+
+      // Add new candidates.
+      for (int i = 0; i < 6; ++i) {
+        auto neighbor = randomCandidate.nodeInDir(i);
+        if (occupied.find(neighbor) == occupied.end()) {
+          candidates.insert(neighbor);
         }
-
-        occupied.insert(randomCandidate);
-
-        // Add this candidate as a particle if not a hole.
-        if (randBool(1.0 - holeProb)) {
-            insert(new HoleFillerParticle(randomCandidate, -1, randDir(), *this));
-            ++numNonStaticParticles;
-
-            // Add new candidates.
-            for (int i = 0; i < 6; ++i) {
-                auto neighbor = randomCandidate.nodeInDir(i);
-                if (occupied.find(neighbor) == occupied.end()) {
-                    candidates.insert(neighbor);
-                }
-            }
-        }
+      }
     }
+  }
 }

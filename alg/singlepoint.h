@@ -4,46 +4,47 @@
 #include "core/globalparticle.h"
 #include "core/amoebotsystem.h"
 
-#include <unordered_set>
+#include <vector>
 
 
 class SingleParticle : public GlobalParticle
 {
 public:
-    using Direction = GlobalParticle::Direction;
+  using Direction = GlobalParticle::Direction;
 
-    enum class State
-    {
-        Active,
-        Idle,
-        Leader
-    };
+  enum class State
+  {
+    Active,
+    Idle,
+    Leader
+  };
 
-    SingleParticle(const Node& head, const int globalTailDir, const int orientation, AmoebotSystem& system);
+  SingleParticle(const Node& head, const int globalTailDir, const int orientation, AmoebotSystem& system);
 
-    void activate() override;
-    QString inspectionText() const override;
+  void activate() override;
+  QString inspectionText() const override;
 
-    int headMarkDir() const override;
-    int headMarkColor() const override;
-    int tailMarkColor() const override;
+  int headMarkDir() const override;
+  int headMarkColor() const override;
+  int tailMarkColor() const override;
 
-    SingleParticle& nbrAtGlobalDir(int dir, bool head = true) const;
+  SingleParticle& nbrAtGlobalDir(int dir, bool head = true) const;
 protected:
-    int erode() const;
-    std::unordered_set<int> getActiveNbrs() const;
+  int erode() const;
+  bool isConsecutive(const std::vector<int>& neighbors) const;
+  std::vector<int> getActiveNbrs() const;
 
-    State _state;
-    int _pointAt;
+  State _state;
+  int _pointAt;
 private:
-    friend class SingleParticleSystem;
+  friend class SingleParticleSystem;
 };
 
 
 class SingleParticleSystem : public AmoebotSystem
 {
 public:
-    SingleParticleSystem(const int numParticles = 250);
+  SingleParticleSystem(const int numParticles = 250);
 };
 
 
