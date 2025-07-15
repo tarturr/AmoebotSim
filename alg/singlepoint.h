@@ -4,6 +4,8 @@
 #include "core/globalparticle.h"
 #include "core/amoebotsystem.h"
 
+#include <unordered_set>
+
 
 class SingleParticle : public GlobalParticle
 {
@@ -29,7 +31,7 @@ public:
     SingleParticle& nbrAtGlobalDir(int dir, bool head = true) const;
 protected:
     int erode() const;
-    std::vector<int> getActiveNbrs() const;
+    std::unordered_set<int> getActiveNbrs() const;
 
     State _state;
     int _pointAt;

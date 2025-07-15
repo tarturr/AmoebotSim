@@ -23,6 +23,7 @@
 #include "alg/singlepoint.h"
 #include "alg/holefiller.h"
 #include "alg/test.h"
+#include "alg/holedleaderelection.h"
 
 Algorithm::Algorithm(QString name, QString signature)
     : _name(name),
@@ -467,6 +468,29 @@ void TestParticleAlg::instantiate(const unsigned int numParticles, const double 
     }
 }
 
+HLEAlg::HLEAlg()
+    : Algorithm("Holed Leader Election Algorithm", "hlealg")
+{
+    addParameter("# Particles", "200");
+    addParameter("Hole Prob.", "0.2");
+}
+
+void HLEAlg::instantiate(const unsigned int numParticles, const double holeProb)
+{
+    if (numParticles <= 0)
+    {
+        emit log("# particles must be > 0", true);
+    }
+    else if (holeProb < 0 || holeProb > 1)
+    {
+        emit log("holeProb in [0,1] required", true);
+    }
+    else
+    {
+        emit setSystem(std::make_shared<HLESystem>(numParticles, holeProb));
+    }
+}
+
 AlgorithmList::AlgorithmList() {
   // Demo algorithms.
   _algorithms.push_back(new DiscoDemoAlg());
@@ -492,6 +516,7 @@ AlgorithmList::AlgorithmList() {
   _algorithms.push_back(new SingleParticleAlg());
   _algorithms.push_back(new HoleFillerAlg());
   _algorithms.push_back(new TestParticleAlg());
+  _algorithms.push_back(new HLEAlg());
 }
 
 AlgorithmList::~AlgorithmList() {

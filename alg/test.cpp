@@ -16,10 +16,13 @@ void TestParticle::activate() {
         if (!hasNbrAtLabel(GetLabel(botL)) && hasNbrAtLabel(GetLabel(botR))) {//test d'une place au botL
             expand(GetLabel(botL));
             exp = true;
-        }else if(!hasNbrAtLabel(GetLabel(botR)) && hasNbrAtLabel(GetLabel(botL))) {//test d'une place au botR
+        }
+        /*
+         * else if(!hasNbrAtLabel(GetLabel(botR)) && hasNbrAtLabel(GetLabel(botL))) {//test d'une place au botR
             expand(GetLabel(botR));
             exp = true;
         }
+        */
     }
     //si la particule est étendue
     if (exp) {

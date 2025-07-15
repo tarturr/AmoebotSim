@@ -243,7 +243,7 @@ public:
     SingleParticleAlg();
 
 public slots:
-    void instantiate(const int numParticles = 100, const double holeProb = 0.2);
+    void instantiate(const int numParticles = 100);
 };
 
 class HoleFillerAlg : public Algorithm
@@ -254,7 +254,29 @@ public:
     HoleFillerAlg();
 
 public slots:
-    void instantiate(const int numParticles = 50);
+    void instantiate(const unsigned int numParticles = 50, const double holeProb = 0.2);
+};
+
+class TestParticleAlg : public Algorithm
+{
+    Q_OBJECT
+
+public:
+    TestParticleAlg();
+
+public slots:
+    void instantiate(const unsigned int numParticles = 200, const double holeProb = 0.2);
+};
+
+class HLEAlg : public Algorithm
+{
+    Q_OBJECT
+
+public:
+    HLEAlg();
+
+public slots:
+    void instantiate(const unsigned int numParticles = 200, const double holeProb = 0.2);
 };
 
 class AlgorithmList {

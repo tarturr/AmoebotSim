@@ -1,5 +1,7 @@
 #include "alg/singlepoint.h"
 
+#include "combinations.h"
+
 
 SingleParticle::SingleParticle(const Node& head,
                                const int globalTailDir,
@@ -61,9 +63,9 @@ int SingleParticle::headMarkColor() const
 {
     switch (_state)
     {
-    case State::Active:   return 0x1010FF; // Blue
-    case State::Idle:   return 0x10FFFF; // Gray
-    case State::Leader: return 0x10FF10; // Green
+    case State::Active: return 0x1010FF; // Dark Blue
+    case State::Idle:   return 0x7777FF; // Light Blue
+    case State::Leader: return 0xFF0000; // Green
     }
 }
 
@@ -77,46 +79,27 @@ SingleParticle& SingleParticle::nbrAtGlobalDir(int dir, bool head) const
     return GlobalParticle::nbrAtGlobalDir<SingleParticle>(dir, head);
 }
 
-std::vector<int> SingleParticle::getActiveNbrs() const
+std::unordered_set<int> SingleParticle::getActiveNbrs() const
 {
-    std::vector<int> activeNbrs;
+    std::unordered_set<int> activeNbrs;
 
     for (int i = 0; i < 6; ++i)
     {
         if (hasNbrAtGlobalDir(i) && nbrAtGlobalDir(i)._state == State::Active)
         {
-            activeNbrs.push_back(i);
+            activeNbrs.insert(i);
         }
     }
 
     return activeNbrs;
 }
 
-using Rotations = std::vector<std::vector<int>>;
-
-Rotations getRotations(int n)
-{
-    Rotations rotations;
-
-    for (int j = 0; j < 6; ++j)
-    {
-        std::vector<int> rotation;
-
-        for (int i = 0; i < n; ++i)
-        {
-            rotation.push_back((i + j) % 6);
-        }
-
-        rotations.push_back(std::move(rotation));
-    }
-
-    return rotations;
-}
-
 int SingleParticle::erode() const
 {
-    std::vector<int> activeNbrs = getActiveNbrs();
+    std::unordered_set<int> activeNbrs = getActiveNbrs();
     std::size_t max{ activeNbrs.size() };
+
+    int first{ *activeNbrs.begin() };
 
     if (max == 6)
     {
@@ -124,17 +107,20 @@ int SingleParticle::erode() const
     }
     else if (max == 1)
     {
-        return activeNbrs[0];
+        return first;
     }
 
-    Rotations rotations = getRotations(max);
+    Combinations combinations{ max };
+    return combinations.contains(activeNbrs) ? first : -1;
+
+    /* Rotations rotations = getRotations(max);
 
     if (std::find(rotations.begin(), rotations.end(), activeNbrs) != rotations.end())
     {
         return activeNbrs[0];
     }
 
-    return -1;
+    return -1; */
 }
 
 

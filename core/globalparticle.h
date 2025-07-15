@@ -27,10 +27,6 @@ public:
     void expandToGlobalDir(int dir);
     void pushToGlobalDir(int dir);
     void pullFromGlobalDir(int dir);
-
-    void onStabilized();
-    void onDrop();
-    void onRescue();
 };
 
 template<class Particle>

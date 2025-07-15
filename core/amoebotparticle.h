@@ -162,8 +162,9 @@ template<class ParticleType>
 ParticleType& AmoebotParticle::nbrAtLabel(int label) const {
   Node nbrNode = nbrNodeReachedViaLabel(label);
   auto it = system.particleMap.find(nbrNode);
-  Q_ASSERT(it != system.particleMap.end() &&
-           dynamic_cast<ParticleType*>(it->second) != nullptr);
+  Q_ASSERT(it != system.particleMap.end());
+  Q_ASSERT(it->second != nullptr);
+  Q_ASSERT(dynamic_cast<ParticleType*>(it->second) != nullptr);
 
   return dynamic_cast<ParticleType&>(*(it->second));
 }

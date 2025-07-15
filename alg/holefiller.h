@@ -1,29 +1,20 @@
 #ifndef AMOEBOTSIM_ALG_HOLEFILLER_H_
 #define AMOEBOTSIM_ALG_HOLEFILLER_H_
 
-#include "core/amoebotparticle.h"
+#include "core/globalparticle.h"
 #include "core/amoebotsystem.h"
 
 
-class HoleFillerParticle : public AmoebotParticle
+class HoleFillerParticle : public GlobalParticle
 {
 public:
+    using Direction = GlobalParticle::Direction;
+
     enum class State
     {
         Stabilized,
         Drop,
         Rescue
-    };
-
-    enum Direction
-    {
-        Right,
-        TopRight,
-        TopLeft,
-        Left,
-        BottomLeft,
-        BottomRight,
-        None
     };
 
     HoleFillerParticle(const Node head, const int globalTailDir, const int orientation, AmoebotSystem& system);
@@ -36,14 +27,7 @@ public:
     int tailMarkColor() const override;
 
 protected:
-    int globalDirToLabel(int dir) const;
-    HoleFillerParticle& nbrAtGlobalDir(int dir) const;
-    bool hasNbrAtGlobalDir(int dir) const;
-    void expandToGlobalDir(int dir);
-    void pushToGlobalDir(int dir);
-    void pullFromGlobalDir(int dir);
-
-    void onStabilized();
+    HoleFillerParticle& nbrAtGlobalDir(int dir, bool head = true) const;
     void onDrop();
     void onRescue();
     Direction extendTo();
@@ -69,7 +53,7 @@ private:
 class HoleFillerSystem : public AmoebotSystem
 {
 public:
-    HoleFillerSystem(unsigned int particles = 50);
+    HoleFillerSystem(const unsigned int particles = 50, const double holeProb = 0.2);
 
 private:
     Node chooseRandomNode(const std::vector<Node>& nodes) const;

@@ -9,6 +9,7 @@ QMAKE_INFO_PLIST = res/Info.plist
 win32:RC_FILE = res/AmoebotSim.rc
 
 HEADERS += \
+    alg/combinations.h \
     alg/demo/ballroomdemo.h \
     alg/demo/discodemo.h \
     alg/demo/dynamicdemo.h \
@@ -21,13 +22,16 @@ HEADERS += \
     alg/energyshape.h \
     alg/energysharing.h \
     alg/hexagonformation.h \
+    alg/holedleaderelection.h \
     alg/holefiller.h \
     alg/infobjcoating.h \
     alg/leaderelectionbyerosion.h \
     alg/shapeformation.h \
     alg/singlepoint.h \
+    alg/test.h \
     core/amoebotparticle.h \
     core/amoebotsystem.h \
+    core/globalparticle.h \
     core/localparticle.h \
     core/metric.h \
     core/node.h \
@@ -47,6 +51,7 @@ HEADERS += \
     alg/leaderelection.h
 
 SOURCES += \
+    alg/combinations.cpp \
     alg/demo/ballroomdemo.cpp \
     alg/demo/discodemo.cpp \
     alg/demo/dynamicdemo.cpp \
@@ -59,13 +64,16 @@ SOURCES += \
     alg/energyshape.cpp \
     alg/energysharing.cpp \
     alg/hexagonformation.cpp \
+    alg/holedleaderelection.cpp \
     alg/holefiller.cpp \
     alg/infobjcoating.cpp \
     alg/leaderelectionbyerosion.cpp \
     alg/shapeformation.cpp \
     alg/singlepoint.cpp \
+    alg/test.cpp \
     core/amoebotparticle.cpp \
     core/amoebotsystem.cpp \
+    core/globalparticle.cpp \
     core/localparticle.cpp \
     core/metric.cpp \
     core/object.cpp \
